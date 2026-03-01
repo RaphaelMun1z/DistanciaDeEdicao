@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Matriz de Custos - Beecrowd 1833</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;600&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .matrix-container {
+            display: grid;
+            gap: 6px;
+            padding: 2rem;
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            overflow-x: auto;
+            justify-content: center;
+        }
+
+        .cell {
+            min-width: 4.5rem;
+            height: 4.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+            position: relative; /* Importante para as tags flutuantes */
+            text-align: center;
+        }
+
+        .cell-header {
+            background-color: #0f172a;
+            color: white;
+            border-color: #0f172a;
+            font-size: 0.9rem;
+        }
+
+        .cell-empty {
+            background-color: transparent;
+            border: none;
+        }
+
+        /* Cores de Dependência / Caminho */
+        .cell.dep-delete { border: 3px solid #ef4444; background-color: #fef2f2; } /* Vermelho */
+        .cell.dep-insert { border: 3px solid #10b981; background-color: #ecfdf5; } /* Verde */
+        .cell.dep-sub { border: 3px solid #f59e0b; background-color: #fffbeb; } /* Amarelo */
+        
+        .cell.target-preview {
+            background-color: #e2e8f0;
+            color: #64748b;
+            border: 2px dashed #94a3b8;
+            font-size: 1.5rem;
+            animation: pulse-preview 1.5s infinite;
+        }
+
+        .cell.active-calc {
+            background-color: #3b82f6;
+            color: white;
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.5);
+        }
+
+        .cell.path-node {
+            background-color: #8b5cf6;
+            color: white;
+            border-color: #7c3aed;
+            animation: pulse-purple 1.5s infinite;
+        }
+
+        @keyframes pulse-preview {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        @keyframes pulse-purple {
+            0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+        }
+
+        /* Tags Flutuantes */
+        .floating-tag {
+            position: absolute;
+            top: -12px;
+            right: -20px;
+            color: white;
+            font-size: 0.75rem;
+            font-family: 'Fira Code', monospace;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            z-index: 50;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+            pointer-events: none;
+            white-space: nowrap;
+            animation: popTag 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .tag-del { background-color: #ef4444; border: 1px solid #b91c1c; }
+        .tag-ins { background-color: #10b981; border: 1px solid #047857; }
+        .tag-sub { background-color: #f59e0b; border: 1px solid #b45309; }
+
+        @keyframes popTag {
+            0% { transform: scale(0.3) translateY(10px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center">
+
+    <div class="w-full max-w-5xl space-y-6">
+        
+        <!-- HEADER -->
+        <header class="text-center space-y-2">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-800 flex items-center justify-center gap-3">
+                <i class="fas fa-tree text-emerald-600"></i> Beecrowd 1833: Decoração de Natal
+            </h1>
+            <p class="text-slate-500 max-w-2xl mx-auto">
+                Preencha as quantidades e custos para visualizar a matriz de Programação Dinâmica ganhando vida com as opções calculadas no miolo.
+            </p>
+        </header>
+
+        <!-- CONFIGURATION PANEL -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h2 class="text-lg font-semibold mb-4 text-slate-700 border-b pb-2"><i class="fas fa-gift mr-2"></i>Configuração da Simulação</h2>
+            
+            <!-- Linha 1: Quantidades -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Quantidade de Enfeites Antigos (Linhas)</label>
+                    <input type="number" id="qAntigos" class="w-full border-slate-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border font-mono" value="4" min="1">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Quantidade de Enfeites Novos (Colunas)</label>
+                    <input type="number" id="qNovos" class="w-full border-slate-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border font-mono" value="5" min="1">
+                </div>
+            </div>
+
+            <!-- Linha 2: Custos -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-red-50 p-3 rounded-lg border border-red-100 relative overflow-hidden">
+                    <div class="absolute right-[-10px] top-[-10px] opacity-10"><i class="fas fa-minus-circle text-5xl"></i></div>
+                    <label class="block text-sm font-medium text-red-700 mb-1 relative z-10"><i class="fas fa-minus-circle mr-1"></i>Custo Remover (Cima)</label>
+                    <input type="number" id="cRemover" class="w-full bg-white border-red-200 rounded text-red-700 p-2 font-mono relative z-10" value="50" min="0">
+                </div>
+                <div class="bg-green-50 p-3 rounded-lg border border-green-100 relative overflow-hidden">
+                    <div class="absolute right-[-10px] top-[-10px] opacity-10"><i class="fas fa-plus-circle text-5xl"></i></div>
+                    <label class="block text-sm font-medium text-green-700 mb-1 relative z-10"><i class="fas fa-plus-circle mr-1"></i>Custo Inserir (Esq)</label>
+                    <input type="number" id="cInserir" class="w-full bg-white border-green-200 rounded text-green-700 p-2 font-mono relative z-10" value="250" min="0">
+                </div>
+                <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-100 relative overflow-hidden">
+                    <div class="absolute right-[-10px] top-[-10px] opacity-10"><i class="fas fa-exchange-alt text-5xl"></i></div>
+                    <label class="block text-sm font-medium text-yellow-700 mb-1 relative z-10"><i class="fas fa-exchange-alt mr-1"></i>Custo Substituir (Diag)</label>
+                    <input type="number" id="cSub" class="w-full bg-white border-yellow-200 rounded text-yellow-700 p-2 font-mono relative z-10" value="100" min="0">
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button id="btnGerar" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-sm flex items-center text-lg">
+                    <i class="fas fa-table mr-2"></i> Montar Matriz de Custos
+                </button>
+            </div>
+        </div>
+
+        <!-- MAIN WORKSPACE -->
+        <div id="workspace" class="hidden w-full space-y-4">
+            
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex gap-2 w-full md:w-auto">
+                    <button id="btnPasso" class="flex-1 md:flex-none bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center">
+                        <i class="fas fa-step-forward mr-2"></i> Avançar Passo
+                    </button>
+                    <button id="btnPlay" class="flex-1 md:flex-none bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center">
+                        <i class="fas fa-play mr-2"></i> Calcular Tudo
+                    </button>
+                    <button id="btnCaminho" class="hidden flex-1 md:flex-none bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center">
+                        <i class="fas fa-route mr-2"></i> Mostrar Caminho Otimizado
+                    </button>
+                </div>
+                <div id="statusBadge" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider">
+                    Aguardando
+                </div>
+            </div>
+
+            <!-- Matriz ocupa o espaço inteiro e fica centralizada -->
+            <div id="matrizContainer" class="matrix-container w-full">
+                <!-- Matrix será injetada aqui -->
+            </div>
+
+        </div>
+    </div>
+
+<script>
+    // --- Application State ---
+    let arrAntigos = [], arrNovos = [];
+    let costs = { del: 50, ins: 250, sub: 100 };
+    let dp = [];
+    let rows = 0, cols = 0;
+    
+    // Iteration state
+    let state = 'IDLE'; // INIT_ROW, INIT_COL, CALC_PREVIEW, CALC_RESOLVE, DONE
+    let currI = 0, currJ = 0;
+    let autoPlayInterval = null;
+    let activeTags = []; // Para armazenar as tags flutuantes geradas
+
+    // --- DOM Elements ---
+    const els = {
+        qAntigos: document.getElementById('qAntigos'),
+        qNovos: document.getElementById('qNovos'),
+        cRemover: document.getElementById('cRemover'),
+        cInserir: document.getElementById('cInserir'),
+        cSub: document.getElementById('cSub'),
+        btnGerar: document.getElementById('btnGerar'),
+        btnPasso: document.getElementById('btnPasso'),
+        btnPlay: document.getElementById('btnPlay'),
+        btnCaminho: document.getElementById('btnCaminho'),
+        workspace: document.getElementById('workspace'),
+        matrizContainer: document.getElementById('matrizContainer'),
+        statusBadge: document.getElementById('statusBadge')
+    };
+
+    // --- Core Functions ---
+
+    els.btnGerar.addEventListener('click', () => {
+        let qA = parseInt(els.qAntigos.value) || 0;
+        let qN = parseInt(els.qNovos.value) || 0;
+        
+        if (qA < 1 || qN < 1) {
+            alert("A quantidade de enfeites deve ser pelo menos 1.");
+            return;
+        }
+
+        // Gera labels genéricas baseadas na quantidade
+        arrAntigos = Array.from({length: qA}, (_, i) => `A${i+1}`);
+        arrNovos = Array.from({length: qN}, (_, i) => `N${i+1}`);
+
+        costs.del = parseInt(els.cRemover.value) || 0;
+        costs.ins = parseInt(els.cInserir.value) || 0;
+        costs.sub = parseInt(els.cSub.value) || 0;
+
+        rows = arrAntigos.length + 1;
+        cols = arrNovos.length + 1;
+        
+        dp = Array.from({length: rows}, () => Array(cols).fill(null));
+        
+        state = 'INIT_ROW';
+        currI = 0;
+        currJ = 0;
+        
+        stopAutoPlay();
+        clearHighlightsAndTags();
+        els.btnCaminho.classList.add('hidden');
+        els.btnPasso.disabled = false;
+        els.btnPlay.disabled = false;
+        els.btnPasso.classList.remove('opacity-50', 'cursor-not-allowed');
+        els.btnPlay.classList.remove('opacity-50', 'cursor-not-allowed');
+
+        updateStatus('Inicializando Bordas', 'bg-blue-100 text-blue-700');
+        renderMatrix();
+        els.workspace.classList.remove('hidden');
+    });
+
+    els.btnPasso.addEventListener('click', performStep);
+    els.btnPlay.addEventListener('click', toggleAutoPlay);
+    els.btnCaminho.addEventListener('click', highlightOptimalPath);
+
+    function renderMatrix() {
+        els.matrizContainer.style.gridTemplateColumns = `repeat(${cols + 1}, minmax(0, 1fr))`;
+        els.matrizContainer.innerHTML = '';
+
+        for (let r = -1; r < rows; r++) {
+            for (let c = -1; c < cols; c++) {
+                const div = document.createElement('div');
+                div.className = 'cell';
+                div.id = `cell-${r}-${c}`;
+
+                if (r === -1 && c === -1) {
+                    div.classList.add('cell-empty');
+                } else if (r === -1) {
+                    div.classList.add('cell-header');
+                    div.textContent = c === 0 ? 'Ø' : arrNovos[c-1];
+                } else if (c === -1) {
+                    div.classList.add('cell-header');
+                    div.textContent = r === 0 ? 'Ø' : arrAntigos[r-1];
+                } else {
+                    div.textContent = ''; 
+                }
+                
+                els.matrizContainer.appendChild(div);
+            }
+        }
+    }
+
+    function updateCellUI(r, c, val, highlightClass = null) {
+        const cell = document.getElementById(`cell-${r}-${c}`);
+        if(cell) {
+            cell.textContent = val;
+            if(highlightClass) {
+                cell.classList.add(highlightClass);
+                setTimeout(() => cell.classList.remove(highlightClass), 600);
+            }
+        }
+    }
+
+    function clearHighlightsAndTags() {
+        // Remove classes de highlight das células
+        document.querySelectorAll('.cell').forEach(el => {
+            el.classList.remove('active-calc', 'dep-delete', 'dep-insert', 'dep-sub', 'target-preview', 'path-node');
+        });
+
+        // Remove divs das tags flutuantes criadas na DOM
+        activeTags.forEach(tag => tag.remove());
+        activeTags = [];
+    }
+
+    function addFloatingTag(r, c, text, bgClass, borderClass) {
+        const cell = document.getElementById(`cell-${r}-${c}`);
+        if (!cell) return;
+        
+        cell.classList.add(borderClass); // Destaca a borda da célula base
+        
+        const tag = document.createElement('div');
+        tag.className = `floating-tag ${bgClass}`;
+        tag.textContent = text;
+        cell.appendChild(tag);
+        
+        activeTags.push(tag);
+    }
+
+    function performStep() {
+        if (state === 'INIT_ROW') {
+            clearHighlightsAndTags();
+            dp[0][currJ] = currJ * costs.ins;
+            updateCellUI(0, currJ, dp[0][currJ], 'active-calc');
+            
+            currJ++;
+            if (currJ >= cols) {
+                state = 'INIT_COL';
+                currI = 1;
+            }
+        } 
+        else if (state === 'INIT_COL') {
+            clearHighlightsAndTags();
+            dp[currI][0] = currI * costs.del;
+            updateCellUI(currI, 0, dp[currI][0], 'active-calc');
+            
+            currI++;
+            if (currI >= rows) {
+                state = 'CALC_PREVIEW';
+                currI = 1;
+                currJ = 1;
+                updateStatus('Calculando Miolo', 'bg-yellow-100 text-yellow-700');
+            }
+        }
+        else if (state === 'CALC_PREVIEW') {
+            clearHighlightsAndTags();
+            if (currI >= rows) return; 
+
+            // Célula alvo recebe "?"
+            const targetCell = document.getElementById(`cell-${currI}-${currJ}`);
+            targetCell.textContent = "?";
+            targetCell.classList.add('target-preview');
+
+            // Cálculos
+            const costDel = dp[currI - 1][currJ] + costs.del;
+            const costIns = dp[currI][currJ - 1] + costs.ins;
+            const costSub = dp[currI - 1][currJ - 1] + costs.sub; // Genéricos nunca são iguais
+
+            // Mostra as tags nas dependências
+            addFloatingTag(currI - 1, currJ, `+${costs.del} = ${costDel}`, 'tag-del', 'dep-delete');
+            addFloatingTag(currI, currJ - 1, `+${costs.ins} = ${costIns}`, 'tag-ins', 'dep-insert');
+            addFloatingTag(currI - 1, currJ - 1, `+${costs.sub} = ${costSub}`, 'tag-sub', 'dep-sub');
+
+            // Troca o estado para resolver no próximo clique
+            state = 'CALC_RESOLVE';
+        }
+        else if (state === 'CALC_RESOLVE') {
+            const costDel = dp[currI - 1][currJ] + costs.del;
+            const costIns = dp[currI][currJ - 1] + costs.ins;
+            const costSub = dp[currI - 1][currJ - 1] + costs.sub;
+
+            const minCost = Math.min(costDel, costIns, costSub);
+            dp[currI][currJ] = minCost;
+
+            clearHighlightsAndTags();
+
+            // Aplica valor na célula e remove "?"
+            const targetCell = document.getElementById(`cell-${currI}-${currJ}`);
+            targetCell.classList.remove('target-preview');
+            updateCellUI(currI, currJ, minCost, 'active-calc');
+
+            // Avança iteradores
+            currJ++;
+            if (currJ >= cols) {
+                currJ = 1;
+                currI++;
+            }
+
+            if (currI >= rows) {
+                state = 'DONE';
+                stopAutoPlay();
+                updateStatus('Finalizado', 'bg-emerald-100 text-emerald-800');
+                els.btnPasso.disabled = true;
+                els.btnPlay.disabled = true;
+                els.btnPasso.classList.add('opacity-50', 'cursor-not-allowed');
+                els.btnPlay.classList.add('opacity-50', 'cursor-not-allowed');
+                els.btnCaminho.classList.remove('hidden');
+            } else {
+                state = 'CALC_PREVIEW'; // Volta a ficar pronto para prever a próxima
+            }
+        }
+    }
+
+    function toggleAutoPlay() {
+        if (autoPlayInterval) {
+            stopAutoPlay();
+        } else {
+            els.btnPlay.innerHTML = '<i class="fas fa-pause mr-2"></i> Pausar';
+            els.btnPlay.classList.replace('bg-emerald-500', 'bg-orange-500');
+            els.btnPlay.classList.replace('hover:bg-emerald-600', 'hover:bg-orange-600');
+            
+            // Intervalo um pouco maior (500ms) para dar tempo de ler as tags flutuantes
+            autoPlayInterval = setInterval(() => {
+                if (state === 'DONE') {
+                    stopAutoPlay();
+                } else {
+                    performStep();
+                }
+            }, 500); 
+        }
+    }
+
+    function stopAutoPlay() {
+        if (autoPlayInterval) {
+            clearInterval(autoPlayInterval);
+            autoPlayInterval = null;
+            els.btnPlay.innerHTML = '<i class="fas fa-play mr-2"></i> Calcular Tudo';
+            els.btnPlay.classList.replace('bg-orange-500', 'bg-emerald-500');
+            els.btnPlay.classList.replace('hover:bg-orange-600', 'hover:bg-emerald-600');
+        }
+    }
+
+    // Backtracking
+    async function highlightOptimalPath() {
+        clearHighlightsAndTags();
+        updateStatus('Mostrando Rota', 'bg-purple-100 text-purple-700');
+        
+        let i = rows - 1;
+        let j = cols - 1;
+        let path = [[i, j]];
+
+        while (i > 0 || j > 0) {
+            let current = dp[i][j];
+
+            if (i > 0 && j > 0 && current === dp[i-1][j-1] + costs.sub) {
+                i--; j--;
+            } else if (i > 0 && current === dp[i-1][j] + costs.del) {
+                i--;
+            } else {
+                j--;
+            }
+            path.push([i, j]);
+        }
+
+        path.reverse();
+        
+        for (let k = 0; k < path.length; k++) {
+            const [r, c] = path[k];
+            const cell = document.getElementById(`cell-${r}-${c}`);
+            cell.classList.add('path-node');
+            await new Promise(resolve => setTimeout(resolve, 150));
+        }
+
+        els.btnCaminho.disabled = true;
+        els.btnCaminho.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    function updateStatus(text, classes) {
+        els.statusBadge.className = `px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider transition-colors ${classes}`;
+        els.statusBadge.textContent = text;
+    }
+
+</script>
+</body>
+</html>
