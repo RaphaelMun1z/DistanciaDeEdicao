@@ -39,7 +39,7 @@
             background-color: #f8fafc;
             border: 1px solid #e2e8f0;
             transition: all 0.3s ease;
-            position: relative; /* Importante para as tags flutuantes */
+            position: relative; 
             text-align: center;
         }
 
@@ -56,9 +56,9 @@
         }
 
         /* Cores de Dependência / Caminho */
-        .cell.dep-delete { border: 3px solid #ef4444; background-color: #fef2f2; } /* Vermelho */
-        .cell.dep-insert { border: 3px solid #10b981; background-color: #ecfdf5; } /* Verde */
-        .cell.dep-sub { border: 3px solid #f59e0b; background-color: #fffbeb; } /* Amarelo */
+        .cell.dep-delete { border: 3px solid #ef4444; background-color: #fef2f2; } 
+        .cell.dep-insert { border: 3px solid #10b981; background-color: #ecfdf5; } 
+        .cell.dep-sub { border: 3px solid #f59e0b; background-color: #fffbeb; } 
         
         .cell.target-preview {
             background-color: #e2e8f0;
@@ -95,7 +95,7 @@
             100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
         }
 
-        /* Tags Flutuantes */
+        /* Tags Flutuantes (Preview) */
         .floating-tag {
             position: absolute;
             top: -12px;
@@ -113,9 +113,31 @@
             animation: popTag 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
 
-        .tag-del { background-color: #ef4444; border: 1px solid #b91c1c; }
-        .tag-ins { background-color: #10b981; border: 1px solid #047857; }
-        .tag-sub { background-color: #f59e0b; border: 1px solid #b45309; }
+        /* Tags do Caminho Otimizado (Fixas e com ícone) */
+        .path-tag {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 0.7rem;
+            font-family: 'Inter', sans-serif;
+            font-weight: bold;
+            padding: 3px 6px;
+            border-radius: 8px;
+            z-index: 20;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            animation: popTag 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .tag-del, .path-tag-del { background-color: #ef4444; color: white; border: 1px solid #b91c1c; }
+        .tag-ins, .path-tag-ins { background-color: #10b981; color: white; border: 1px solid #047857; }
+        .tag-sub, .path-tag-sub { background-color: #f59e0b; color: white; border: 1px solid #b45309; }
+
+        /* Novas tags para quando os enfeites são iguais (Custo 0) */
+        .tag-match, .path-tag-match { background-color: #64748b; color: white; border: 1px solid #475569; }
+        .cell.dep-match { border: 3px solid #64748b; background-color: #f8fafc; }
 
         @keyframes popTag {
             0% { transform: scale(0.3) translateY(10px); opacity: 0; }
@@ -139,10 +161,9 @@
         </header>
 
         <!-- CONFIGURATION PANEL -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <div id="configPanel" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 transition-all duration-300">
             <h2 class="text-lg font-semibold mb-4 text-slate-700 border-b pb-2"><i class="fas fa-gift mr-2"></i>Configuração da Simulação</h2>
             
-            <!-- Linha 1: Quantidades -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-600 mb-1">Quantidade de Enfeites Antigos (Linhas)</label>
@@ -154,7 +175,6 @@
                 </div>
             </div>
 
-            <!-- Linha 2: Custos -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="bg-red-50 p-3 rounded-lg border border-red-100 relative overflow-hidden">
                     <div class="absolute right-[-10px] top-[-10px] opacity-10"><i class="fas fa-minus-circle text-5xl"></i></div>
@@ -180,6 +200,24 @@
             </div>
         </div>
 
+        <!-- NEW COST HEADER (Hidden initially) -->
+        <div id="costHeader" class="hidden bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <div class="flex items-center gap-2 text-red-700 font-medium bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
+                    <i class="fas fa-minus-circle"></i> Remover: <span id="displayRemover" class="font-mono font-bold"></span>
+                </div>
+                <div class="flex items-center gap-2 text-green-700 font-medium bg-green-50 px-3 py-1.5 rounded-lg border border-green-100">
+                    <i class="fas fa-plus-circle"></i> Inserir: <span id="displayInserir" class="font-mono font-bold"></span>
+                </div>
+                <div class="flex items-center gap-2 text-yellow-700 font-medium bg-yellow-50 px-3 py-1.5 rounded-lg border border-yellow-100">
+                    <i class="fas fa-exchange-alt"></i> Substituir: <span id="displaySub" class="font-mono font-bold"></span>
+                </div>
+            </div>
+            <button id="btnEditar" class="text-sm bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-lg font-medium transition flex items-center whitespace-nowrap">
+                <i class="fas fa-edit mr-2"></i> Editar Configurações
+            </button>
+        </div>
+
         <!-- MAIN WORKSPACE -->
         <div id="workspace" class="hidden w-full space-y-4">
             
@@ -200,7 +238,6 @@
                 </div>
             </div>
 
-            <!-- Matriz ocupa o espaço inteiro e fica centralizada -->
             <div id="matrizContainer" class="matrix-container w-full">
                 <!-- Matrix será injetada aqui -->
             </div>
@@ -216,13 +253,19 @@
     let rows = 0, cols = 0;
     
     // Iteration state
-    let state = 'IDLE'; // INIT_ROW, INIT_COL, CALC_PREVIEW, CALC_RESOLVE, DONE
+    let state = 'IDLE'; 
     let currI = 0, currJ = 0;
     let autoPlayInterval = null;
-    let activeTags = []; // Para armazenar as tags flutuantes geradas
 
     // --- DOM Elements ---
     const els = {
+        configPanel: document.getElementById('configPanel'),
+        costHeader: document.getElementById('costHeader'),
+        displayRemover: document.getElementById('displayRemover'),
+        displayInserir: document.getElementById('displayInserir'),
+        displaySub: document.getElementById('displaySub'),
+        btnEditar: document.getElementById('btnEditar'),
+
         qAntigos: document.getElementById('qAntigos'),
         qNovos: document.getElementById('qNovos'),
         cRemover: document.getElementById('cRemover'),
@@ -248,13 +291,17 @@
             return;
         }
 
-        // Gera labels genéricas baseadas na quantidade
         arrAntigos = Array.from({length: qA}, (_, i) => `A${i+1}`);
         arrNovos = Array.from({length: qN}, (_, i) => `N${i+1}`);
 
         costs.del = parseInt(els.cRemover.value) || 0;
         costs.ins = parseInt(els.cInserir.value) || 0;
         costs.sub = parseInt(els.cSub.value) || 0;
+
+        // Atualiza os valores no novo Header de Custos
+        els.displayRemover.textContent = costs.del;
+        els.displayInserir.textContent = costs.ins;
+        els.displaySub.textContent = costs.sub;
 
         rows = arrAntigos.length + 1;
         cols = arrNovos.length + 1;
@@ -268,14 +315,33 @@
         stopAutoPlay();
         clearHighlightsAndTags();
         els.btnCaminho.classList.add('hidden');
+        
+        // Resetando o estado do botão de caminho otimizado (Correção do Bug)
+        els.btnCaminho.disabled = false;
+        els.btnCaminho.classList.remove('opacity-50', 'cursor-not-allowed');
+
         els.btnPasso.disabled = false;
         els.btnPlay.disabled = false;
         els.btnPasso.classList.remove('opacity-50', 'cursor-not-allowed');
         els.btnPlay.classList.remove('opacity-50', 'cursor-not-allowed');
 
+        // Transição de UI (Esconde Form, Mostra Header e Área de Trabalho)
+        els.configPanel.classList.add('hidden');
+        els.costHeader.classList.remove('hidden');
+        els.workspace.classList.remove('hidden');
+
         updateStatus('Inicializando Bordas', 'bg-blue-100 text-blue-700');
         renderMatrix();
-        els.workspace.classList.remove('hidden');
+    });
+
+    els.btnEditar.addEventListener('click', () => {
+        // Para tudo e volta para a tela de configurações
+        stopAutoPlay();
+        state = 'IDLE';
+        els.configPanel.classList.remove('hidden');
+        els.costHeader.classList.add('hidden');
+        els.workspace.classList.add('hidden');
+        clearHighlightsAndTags();
     });
 
     els.btnPasso.addEventListener('click', performStep);
@@ -297,9 +363,21 @@
                 } else if (r === -1) {
                     div.classList.add('cell-header');
                     div.textContent = c === 0 ? 'Ø' : arrNovos[c-1];
+                    // Torna os cabeçalhos novos editáveis
+                    if (c > 0) {
+                        div.contentEditable = "true";
+                        div.title = "Clique para renomear";
+                        div.addEventListener('blur', (e) => arrNovos[c-1] = e.target.textContent.trim().toUpperCase());
+                    }
                 } else if (c === -1) {
                     div.classList.add('cell-header');
                     div.textContent = r === 0 ? 'Ø' : arrAntigos[r-1];
+                    // Torna os cabeçalhos antigos editáveis
+                    if (r > 0) {
+                        div.contentEditable = "true";
+                        div.title = "Clique para renomear";
+                        div.addEventListener('blur', (e) => arrAntigos[r-1] = e.target.textContent.trim().toUpperCase());
+                    }
                 } else {
                     div.textContent = ''; 
                 }
@@ -321,28 +399,24 @@
     }
 
     function clearHighlightsAndTags() {
-        // Remove classes de highlight das células
         document.querySelectorAll('.cell').forEach(el => {
             el.classList.remove('active-calc', 'dep-delete', 'dep-insert', 'dep-sub', 'target-preview', 'path-node');
         });
 
-        // Remove divs das tags flutuantes criadas na DOM
-        activeTags.forEach(tag => tag.remove());
-        activeTags = [];
+        // Limpa tanto as tags de preview quanto as tags de caminho
+        document.querySelectorAll('.floating-tag, .path-tag').forEach(tag => tag.remove());
     }
 
-    function addFloatingTag(r, c, text, bgClass, borderClass) {
+    function addPreviewTag(r, c, text, bgClass, borderClass) {
         const cell = document.getElementById(`cell-${r}-${c}`);
         if (!cell) return;
         
-        cell.classList.add(borderClass); // Destaca a borda da célula base
+        cell.classList.add(borderClass); 
         
         const tag = document.createElement('div');
         tag.className = `floating-tag ${bgClass}`;
         tag.textContent = text;
         cell.appendChild(tag);
-        
-        activeTags.push(tag);
     }
 
     function performStep() {
@@ -374,40 +448,47 @@
             clearHighlightsAndTags();
             if (currI >= rows) return; 
 
-            // Célula alvo recebe "?"
             const targetCell = document.getElementById(`cell-${currI}-${currJ}`);
             targetCell.textContent = "?";
             targetCell.classList.add('target-preview');
 
-            // Cálculos
+            // Verifica se os enfeites da linha e coluna atual são iguais
+            const isMatch = arrAntigos[currI - 1] === arrNovos[currJ - 1];
+            const actualSubCost = isMatch ? 0 : costs.sub;
+
             const costDel = dp[currI - 1][currJ] + costs.del;
             const costIns = dp[currI][currJ - 1] + costs.ins;
-            const costSub = dp[currI - 1][currJ - 1] + costs.sub; // Genéricos nunca são iguais
+            const costSub = dp[currI - 1][currJ - 1] + actualSubCost; 
 
-            // Mostra as tags nas dependências
-            addFloatingTag(currI - 1, currJ, `+${costs.del} = ${costDel}`, 'tag-del', 'dep-delete');
-            addFloatingTag(currI, currJ - 1, `+${costs.ins} = ${costIns}`, 'tag-ins', 'dep-insert');
-            addFloatingTag(currI - 1, currJ - 1, `+${costs.sub} = ${costSub}`, 'tag-sub', 'dep-sub');
+            addPreviewTag(currI - 1, currJ, `+${costs.del} = ${costDel}`, 'tag-del', 'dep-delete');
+            addPreviewTag(currI, currJ - 1, `+${costs.ins} = ${costIns}`, 'tag-ins', 'dep-insert');
+            
+            // Se for igual, mostra tag cinza de +0, senão mostra a tag amarela normal
+            if (isMatch) {
+                addPreviewTag(currI - 1, currJ - 1, `+0 = ${costSub}`, 'tag-match', 'dep-match');
+            } else {
+                addPreviewTag(currI - 1, currJ - 1, `+${costs.sub} = ${costSub}`, 'tag-sub', 'dep-sub');
+            }
 
-            // Troca o estado para resolver no próximo clique
             state = 'CALC_RESOLVE';
         }
         else if (state === 'CALC_RESOLVE') {
+            const isMatch = arrAntigos[currI - 1] === arrNovos[currJ - 1];
+            const actualSubCost = isMatch ? 0 : costs.sub;
+
             const costDel = dp[currI - 1][currJ] + costs.del;
             const costIns = dp[currI][currJ - 1] + costs.ins;
-            const costSub = dp[currI - 1][currJ - 1] + costs.sub;
+            const costSub = dp[currI - 1][currJ - 1] + actualSubCost;
 
             const minCost = Math.min(costDel, costIns, costSub);
             dp[currI][currJ] = minCost;
 
             clearHighlightsAndTags();
 
-            // Aplica valor na célula e remove "?"
             const targetCell = document.getElementById(`cell-${currI}-${currJ}`);
             targetCell.classList.remove('target-preview');
             updateCellUI(currI, currJ, minCost, 'active-calc');
 
-            // Avança iteradores
             currJ++;
             if (currJ >= cols) {
                 currJ = 1;
@@ -424,7 +505,7 @@
                 els.btnPlay.classList.add('opacity-50', 'cursor-not-allowed');
                 els.btnCaminho.classList.remove('hidden');
             } else {
-                state = 'CALC_PREVIEW'; // Volta a ficar pronto para prever a próxima
+                state = 'CALC_PREVIEW'; 
             }
         }
     }
@@ -437,7 +518,6 @@
             els.btnPlay.classList.replace('bg-emerald-500', 'bg-orange-500');
             els.btnPlay.classList.replace('hover:bg-emerald-600', 'hover:bg-orange-600');
             
-            // Intervalo um pouco maior (500ms) para dar tempo de ler as tags flutuantes
             autoPlayInterval = setInterval(() => {
                 if (state === 'DONE') {
                     stopAutoPlay();
@@ -458,7 +538,7 @@
         }
     }
 
-    // Backtracking
+    // --- Nova Lógica de Backtracking ---
     async function highlightOptimalPath() {
         clearHighlightsAndTags();
         updateStatus('Mostrando Rota', 'bg-purple-100 text-purple-700');
@@ -467,10 +547,13 @@
         let j = cols - 1;
         let path = [[i, j]];
 
+        // Caminho Reverso para encontrar a rota matemática
         while (i > 0 || j > 0) {
             let current = dp[i][j];
+            let isMatch = (i > 0 && j > 0) ? (arrAntigos[i-1] === arrNovos[j-1]) : false;
+            let actualSubCost = isMatch ? 0 : costs.sub;
 
-            if (i > 0 && j > 0 && current === dp[i-1][j-1] + costs.sub) {
+            if (i > 0 && j > 0 && current === dp[i-1][j-1] + actualSubCost) {
                 i--; j--;
             } else if (i > 0 && current === dp[i-1][j] + costs.del) {
                 i--;
@@ -480,13 +563,48 @@
             path.push([i, j]);
         }
 
+        // Inverte para animar do começo ao fim (0,0 até n,n)
         path.reverse();
         
         for (let k = 0; k < path.length; k++) {
             const [r, c] = path[k];
             const cell = document.getElementById(`cell-${r}-${c}`);
             cell.classList.add('path-node');
-            await new Promise(resolve => setTimeout(resolve, 150));
+
+            // Se não for a primeira célula, adicionamos a TAG baseada no movimento
+            if (k > 0) {
+                const [prevR, prevC] = path[k-1];
+                let opClass = '', icon = '', addedCost = '';
+
+                if (r > prevR && c > prevC) { // Moveu na Diagonal
+                    let isMatch = arrAntigos[r-1] === arrNovos[c-1];
+                    if (isMatch) {
+                        opClass = 'path-tag-match';
+                        icon = 'fa-check';
+                        addedCost = `+0`;
+                    } else {
+                        opClass = 'path-tag-sub';
+                        icon = 'fa-exchange-alt';
+                        addedCost = `+${costs.sub}`;
+                    }
+                } else if (r > prevR && c === prevC) { // Moveu para Baixo
+                    opClass = 'path-tag-del';
+                    icon = 'fa-minus-circle';
+                    addedCost = `+${costs.del}`;
+                } else if (r === prevR && c > prevC) { // Moveu para a Direita
+                    opClass = 'path-tag-ins';
+                    icon = 'fa-plus-circle';
+                    addedCost = `+${costs.ins}`;
+                }
+
+                const tag = document.createElement('div');
+                tag.className = `path-tag ${opClass}`;
+                tag.innerHTML = `<i class="fas ${icon}"></i> ${addedCost}`;
+                cell.appendChild(tag);
+            }
+
+            // Aumentei o delay para 300ms para o usuário poder ler as tags nascendo
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
 
         els.btnCaminho.disabled = true;
