@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador Matriz de Custos - Beecrowd 1833</title>
+    <title>Simulador Matriz de Custos - Beecrowd 1833 (Pisca-Pisca)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -47,7 +47,9 @@
             background-color: #0f172a;
             color: white;
             border-color: #0f172a;
-            font-size: 0.9rem;
+            font-size: 0.75rem;
+            padding: 0 4px;
+            word-break: break-all;
         }
 
         .cell-empty {
@@ -135,7 +137,7 @@
         .tag-ins, .path-tag-ins { background-color: #10b981; color: white; border: 1px solid #047857; }
         .tag-sub, .path-tag-sub { background-color: #f59e0b; color: white; border: 1px solid #b45309; }
 
-        /* Novas tags para quando os enfeites são iguais (Custo 0) */
+        /* Novas tags para quando as lâmpadas são iguais (Custo 0) */
         .tag-match, .path-tag-match { background-color: #64748b; color: white; border: 1px solid #475569; }
         .cell.dep-match { border: 3px solid #64748b; background-color: #f8fafc; }
 
@@ -143,6 +145,53 @@
             0% { transform: scale(0.3) translateY(10px); opacity: 0; }
             100% { transform: scale(1) translateY(0); opacity: 1; }
         }
+
+        .color-btn {
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        .color-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Container de Tags (Visual UI) */
+        .tags-container {
+            min-height: 42px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 6px;
+            align-items: center;
+        }
+
+        .lamp-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .lamp-tag .remove-btn {
+            margin-left: 6px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .lamp-tag .remove-btn:hover {
+            opacity: 1;
+        }
+
+        /* Cores das Lâmpadas (UI) */
+        .bg-VERMELHA { background-color: #ef4444; color: white; }
+        .bg-VERDE { background-color: #22c55e; color: white; }
+        .bg-AZUL { background-color: #3b82f6; color: white; }
+        .bg-AMARELA { background-color: #eab308; color: white; text-shadow: 0 1px 1px rgba(0,0,0,0.2); }
+        .bg-BRANCA { background-color: #f8fafc; color: #334155; border: 1px solid #cbd5e1; }
+        .bg-DEFAULT { background-color: #64748b; color: white; } /* Cor genérica de fallback */
 
     </style>
 </head>
@@ -153,49 +202,95 @@
         <!-- HEADER -->
         <header class="text-center space-y-2">
             <h1 class="text-3xl md:text-4xl font-bold text-slate-800 flex items-center justify-center gap-3">
-                <i class="fas fa-tree text-emerald-600"></i> Beecrowd 1833: Decoração de Natal
+                <i class="fas fa-lightbulb text-yellow-500"></i> Beecrowd 1833: Montagem de Pisca-Pisca
             </h1>
             <p class="text-slate-500 max-w-2xl mx-auto">
-                Preencha as quantidades e custos para visualizar a matriz de Programação Dinâmica ganhando vida com as opções calculadas no miolo.
+                Transforme a sequência atual de lâmpadas na sequência desejada com o menor tempo possível.
             </p>
         </header>
 
+        <!-- QUICK CONFIG (TEST CASES) -->
+        <div id="quickConfigPanel" class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex flex-wrap items-center gap-4 shadow-sm transition-all duration-300">
+            <div class="font-bold text-indigo-800 flex items-center gap-2">
+                <i class="fas fa-bolt"></i> Casos do Beecrowd:
+            </div>
+            <button onclick="loadTestCase(1)" class="bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-md text-sm font-semibold shadow-sm transition">Caso 1</button>
+            <button onclick="loadTestCase(2)" class="bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-md text-sm font-semibold shadow-sm transition">Caso 2</button>
+            <button onclick="loadTestCase(3)" class="bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-md text-sm font-semibold shadow-sm transition">Caso 3</button>
+            <button onclick="loadTestCase(4)" class="bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-md text-sm font-semibold shadow-sm transition">Caso 4</button>
+        </div>
+
         <!-- CONFIGURATION PANEL -->
         <div id="configPanel" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 transition-all duration-300">
-            <h2 class="text-lg font-semibold mb-4 text-slate-700 border-b pb-2"><i class="fas fa-gift mr-2"></i>Configuração da Simulação</h2>
+            <h2 class="text-lg font-semibold mb-4 text-slate-700 border-b pb-2"><i class="fas fa-sliders-h mr-2"></i>Configuração da Simulação</h2>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+            <!-- Linha 1: Sequências de Lâmpadas -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- Sequência Atual -->
                 <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1">Quantidade de Enfeites Antigos (Linhas)</label>
-                    <input type="number" id="qAntigos" class="w-full border-slate-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border font-mono" value="4" min="1">
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Sequência Atual</label>
+                    <!-- Container Visual de Tags -->
+                    <div id="tagsAntigos" class="w-full border-slate-300 rounded-lg shadow-inner bg-slate-50 border tags-container">
+                        <!-- Tags rendered here by JS -->
+                    </div>
+                    
+                    <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span class="text-xs text-slate-400 font-medium mr-1"><i class="fas fa-plus"></i> Add:</span>
+                        <button type="button" onclick="addCor('atuais', 'VERMELHA')" class="color-btn px-2 py-1 bg-red-100 text-red-700 text-xs rounded font-bold hover:bg-red-200">Vermelha</button>
+                        <button type="button" onclick="addCor('atuais', 'VERDE')" class="color-btn px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-bold hover:bg-green-200">Verde</button>
+                        <button type="button" onclick="addCor('atuais', 'AZUL')" class="color-btn px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded font-bold hover:bg-blue-200">Azul</button>
+                        <button type="button" onclick="addCor('atuais', 'AMARELA')" class="color-btn px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded font-bold hover:bg-yellow-200">Amarela</button>
+                        <button type="button" onclick="addCor('atuais', 'BRANCA')" class="color-btn px-2 py-1 bg-slate-200 text-slate-700 text-xs rounded font-bold hover:bg-slate-300">Branca</button>
+                        <button type="button" onclick="limparCores('atuais')" class="color-btn px-2 py-1 bg-white border border-slate-300 text-slate-500 text-xs rounded hover:bg-red-50 hover:text-red-600 hover:border-red-200 ml-auto" title="Limpar Tudo"><i class="fas fa-trash-alt"></i></button>
+                    </div>
                 </div>
+                
+                <!-- Sequência Desejada -->
                 <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1">Quantidade de Enfeites Novos (Colunas)</label>
-                    <input type="number" id="qNovos" class="w-full border-slate-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border font-mono" value="5" min="1">
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Sequência Desejada</label>
+                    <!-- Container Visual de Tags -->
+                    <div id="tagsNovos" class="w-full border-slate-300 rounded-lg shadow-inner bg-slate-50 border tags-container">
+                        <!-- Tags rendered here by JS -->
+                    </div>
+                    
+                    <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span class="text-xs text-slate-400 font-medium mr-1"><i class="fas fa-plus"></i> Add:</span>
+                        <button type="button" onclick="addCor('novos', 'VERMELHA')" class="color-btn px-2 py-1 bg-red-100 text-red-700 text-xs rounded font-bold hover:bg-red-200">Vermelha</button>
+                        <button type="button" onclick="addCor('novos', 'VERDE')" class="color-btn px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-bold hover:bg-green-200">Verde</button>
+                        <button type="button" onclick="addCor('novos', 'AZUL')" class="color-btn px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded font-bold hover:bg-blue-200">Azul</button>
+                        <button type="button" onclick="addCor('novos', 'AMARELA')" class="color-btn px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded font-bold hover:bg-yellow-200">Amarela</button>
+                        <button type="button" onclick="addCor('novos', 'BRANCA')" class="color-btn px-2 py-1 bg-slate-200 text-slate-700 text-xs rounded font-bold hover:bg-slate-300">Branca</button>
+                        <button type="button" onclick="limparCores('novos')" class="color-btn px-2 py-1 bg-white border border-slate-300 text-slate-500 text-xs rounded hover:bg-red-50 hover:text-red-600 hover:border-red-200 ml-auto" title="Limpar Tudo"><i class="fas fa-trash-alt"></i></button>
+                    </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Linha 2: Custos e Valores -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                    <label class="block text-sm font-bold text-indigo-800 mb-1">Reais por Minuto (R)</label>
+                    <input type="number" id="valMinuto" class="w-full bg-white border-indigo-200 rounded text-indigo-900 p-2 font-mono" value="7" min="1">
+                </div>
                 <div class="bg-red-50 p-3 rounded-lg border border-red-100 relative overflow-hidden">
                     <div class="absolute right-[-10px] top-[-10px] opacity-10"><i class="fas fa-minus-circle text-5xl"></i></div>
-                    <label class="block text-sm font-medium text-red-700 mb-1 relative z-10"><i class="fas fa-minus-circle mr-1"></i>Custo Remover (Cima)</label>
+                    <label class="block text-sm font-medium text-red-700 mb-1 relative z-10" title="Ex: 50 representa 0.5 minutos"><i class="fas fa-minus-circle mr-1"></i>Remover</label>
                     <input type="number" id="cRemover" class="w-full bg-white border-red-200 rounded text-red-700 p-2 font-mono relative z-10" value="50" min="0">
                 </div>
                 <div class="bg-green-50 p-3 rounded-lg border border-green-100 relative overflow-hidden">
                     <div class="absolute right-[-10px] top-[-10px] opacity-10"><i class="fas fa-plus-circle text-5xl"></i></div>
-                    <label class="block text-sm font-medium text-green-700 mb-1 relative z-10"><i class="fas fa-plus-circle mr-1"></i>Custo Inserir (Esq)</label>
+                    <label class="block text-sm font-medium text-green-700 mb-1 relative z-10" title="Ex: 250 representa 2.5 minutos"><i class="fas fa-plus-circle mr-1"></i>Inserir</label>
                     <input type="number" id="cInserir" class="w-full bg-white border-green-200 rounded text-green-700 p-2 font-mono relative z-10" value="250" min="0">
                 </div>
                 <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-100 relative overflow-hidden">
                     <div class="absolute right-[-10px] top-[-10px] opacity-10"><i class="fas fa-exchange-alt text-5xl"></i></div>
-                    <label class="block text-sm font-medium text-yellow-700 mb-1 relative z-10"><i class="fas fa-exchange-alt mr-1"></i>Custo Substituir (Diag)</label>
+                    <label class="block text-sm font-medium text-yellow-700 mb-1 relative z-10" title="Ex: 100 representa 1.0 minuto"><i class="fas fa-exchange-alt mr-1"></i>Substituir</label>
                     <input type="number" id="cSub" class="w-full bg-white border-yellow-200 rounded text-yellow-700 p-2 font-mono relative z-10" value="100" min="0">
                 </div>
             </div>
 
             <div class="mt-6 flex justify-end">
                 <button id="btnGerar" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-sm flex items-center text-lg">
-                    <i class="fas fa-table mr-2"></i> Montar Matriz de Custos
+                    <i class="fas fa-table mr-2"></i> Montar Matriz de Tempos
                 </button>
             </div>
         </div>
@@ -203,6 +298,9 @@
         <!-- NEW COST HEADER (Hidden initially) -->
         <div id="costHeader" class="hidden bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="flex flex-wrap items-center justify-center gap-4">
+                <div class="flex items-center gap-2 text-indigo-800 font-bold bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-200">
+                    <i class="fas fa-coins text-indigo-500"></i> R$/Min: <span id="displayR" class="font-mono"></span>
+                </div>
                 <div class="flex items-center gap-2 text-red-700 font-medium bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
                     <i class="fas fa-minus-circle"></i> Remover: <span id="displayRemover" class="font-mono font-bold"></span>
                 </div>
@@ -214,12 +312,22 @@
                 </div>
             </div>
             <button id="btnEditar" class="text-sm bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-lg font-medium transition flex items-center whitespace-nowrap">
-                <i class="fas fa-edit mr-2"></i> Editar Configurações
+                <i class="fas fa-edit mr-2"></i> Editar Dados
             </button>
         </div>
 
         <!-- MAIN WORKSPACE -->
         <div id="workspace" class="hidden w-full space-y-4">
+
+            <!-- FINAL RESULT BANNER -->
+            <div id="finalResultBanner" class="hidden bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 p-6 rounded-xl shadow-sm text-center transform transition-all duration-500">
+                <h3 class="text-emerald-800 font-bold text-xl mb-2"><i class="fas fa-check-circle mr-2"></i>Cálculo Concluído!</h3>
+                <p class="text-emerald-700 text-sm md:text-base mb-1">O tempo mínimo acumulado na matriz foi de <span id="resTempo" class="font-mono font-bold bg-emerald-100 px-2 py-0.5 rounded"></span> unidades.</p>
+                <div class="mt-4 inline-block bg-white px-6 py-3 rounded-lg shadow-sm border border-emerald-100">
+                    <p class="text-slate-500 text-sm uppercase tracking-wider font-bold mb-1">Valor do Serviço</p>
+                    <p id="resValor" class="text-emerald-600 font-bold text-3xl md:text-4xl"></p>
+                </div>
+            </div>
             
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div class="flex gap-2 w-full md:w-auto">
@@ -230,7 +338,7 @@
                         <i class="fas fa-play mr-2"></i> Calcular Tudo
                     </button>
                     <button id="btnCaminho" class="hidden flex-1 md:flex-none bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center">
-                        <i class="fas fa-route mr-2"></i> Mostrar Caminho Otimizado
+                        <i class="fas fa-route mr-2"></i> Caminho Otimizado
                     </button>
                 </div>
                 <div id="statusBadge" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider">
@@ -247,27 +355,43 @@
 
 <script>
     // --- Application State ---
+    // Listas temporárias para as Tags da UI
+    let tempAtuais = ['AMARELA', 'AZUL', 'VERMELHA'];
+    let tempDesejadas = ['VERMELHA', 'VERDE', 'AZUL', 'AMARELA'];
+
     let arrAntigos = [], arrNovos = [];
     let costs = { del: 50, ins: 250, sub: 100 };
+    let rPorMinuto = 7;
     let dp = [];
     let rows = 0, cols = 0;
     
-    // Iteration state
+    // Estado de iteração
     let state = 'IDLE'; 
     let currI = 0, currJ = 0;
     let autoPlayInterval = null;
 
+    // Constantes do Beecrowd (Casos Falsos para demonstração)
+    const BEECROWD_CASES = {
+        1: { r: 7, atu: ['AMARELA', 'AZUL', 'VERMELHA'], des: ['VERMELHA', 'VERDE', 'AZUL', 'AMARELA'] },
+        2: { r: 10, atu: [], des: ['VERMELHA', 'AZUL'] },
+        3: { r: 5, atu: ['VERMELHA', 'VERMELHA', 'VERMELHA'], des: ['AZUL', 'BRANCA', 'VERMELHA', 'VERDE'] },
+        4: { r: 8, atu: ['AZUL', 'BRANCA', 'AMARELA'], des: [] }
+    };
+
     // --- DOM Elements ---
     const els = {
+        quickConfigPanel: document.getElementById('quickConfigPanel'),
         configPanel: document.getElementById('configPanel'),
         costHeader: document.getElementById('costHeader'),
+        displayR: document.getElementById('displayR'),
         displayRemover: document.getElementById('displayRemover'),
         displayInserir: document.getElementById('displayInserir'),
         displaySub: document.getElementById('displaySub'),
         btnEditar: document.getElementById('btnEditar'),
 
-        qAntigos: document.getElementById('qAntigos'),
-        qNovos: document.getElementById('qNovos'),
+        valMinuto: document.getElementById('valMinuto'),
+        tagsAntigos: document.getElementById('tagsAntigos'),
+        tagsNovos: document.getElementById('tagsNovos'),
         cRemover: document.getElementById('cRemover'),
         cInserir: document.getElementById('cInserir'),
         cSub: document.getElementById('cSub'),
@@ -277,28 +401,115 @@
         btnCaminho: document.getElementById('btnCaminho'),
         workspace: document.getElementById('workspace'),
         matrizContainer: document.getElementById('matrizContainer'),
-        statusBadge: document.getElementById('statusBadge')
+        statusBadge: document.getElementById('statusBadge'),
+        
+        finalResultBanner: document.getElementById('finalResultBanner'),
+        resTempo: document.getElementById('resTempo'),
+        resValor: document.getElementById('resValor')
     };
 
-    // --- Core Functions ---
+    // --- Funções da Nova UI de Tags ---
 
-    els.btnGerar.addEventListener('click', () => {
-        let qA = parseInt(els.qAntigos.value) || 0;
-        let qN = parseInt(els.qNovos.value) || 0;
-        
-        if (qA < 1 || qN < 1) {
-            alert("A quantidade de enfeites deve ser pelo menos 1.");
-            return;
+    function getBgClassByColor(cor) {
+        if (cor === 'VERMELHA') return 'bg-VERMELHA';
+        if (cor === 'VERDE') return 'bg-VERDE';
+        if (cor === 'AZUL') return 'bg-AZUL';
+        if (cor === 'AMARELA') return 'bg-AMARELA';
+        if (cor === 'BRANCA') return 'bg-BRANCA';
+        return 'bg-DEFAULT'; // Caso de falha (fallback)
+    }
+
+    function renderizarTags() {
+        // Renderiza lista Atual
+        els.tagsAntigos.innerHTML = '';
+        if (tempAtuais.length === 0) {
+            els.tagsAntigos.innerHTML = '<span class="text-slate-400 text-sm italic py-1 px-2">Vazia (0 lâmpadas)</span>';
+        } else {
+            tempAtuais.forEach((cor, index) => {
+                const tag = document.createElement('div');
+                tag.className = `lamp-tag ${getBgClassByColor(cor)}`;
+                tag.innerHTML = `${cor} <i class="fas fa-times remove-btn" onclick="removerCor('atuais', ${index})"></i>`;
+                els.tagsAntigos.appendChild(tag);
+            });
         }
 
-        arrAntigos = Array.from({length: qA}, (_, i) => `A${i+1}`);
-        arrNovos = Array.from({length: qN}, (_, i) => `N${i+1}`);
+        // Renderiza lista Desejada
+        els.tagsNovos.innerHTML = '';
+        if (tempDesejadas.length === 0) {
+            els.tagsNovos.innerHTML = '<span class="text-slate-400 text-sm italic py-1 px-2">Vazia (0 lâmpadas)</span>';
+        } else {
+            tempDesejadas.forEach((cor, index) => {
+                const tag = document.createElement('div');
+                tag.className = `lamp-tag ${getBgClassByColor(cor)}`;
+                tag.innerHTML = `${cor} <i class="fas fa-times remove-btn" onclick="removerCor('novos', ${index})"></i>`;
+                els.tagsNovos.appendChild(tag);
+            });
+        }
+    }
+
+    function addCor(lista, cor) {
+        if (lista === 'atuais') {
+            tempAtuais.push(cor);
+        } else {
+            tempDesejadas.push(cor);
+        }
+        renderizarTags();
+    }
+
+    function removerCor(lista, index) {
+        if (lista === 'atuais') {
+            tempAtuais.splice(index, 1);
+        } else {
+            tempDesejadas.splice(index, 1);
+        }
+        renderizarTags();
+    }
+
+    function limparCores(lista) {
+        if (lista === 'atuais') {
+            tempAtuais = [];
+        } else {
+            tempDesejadas = [];
+        }
+        renderizarTags();
+    }
+
+    function loadTestCase(casoIdx) {
+        const c = BEECROWD_CASES[casoIdx];
+        if(!c) return;
+
+        els.valMinuto.value = c.r;
+        tempAtuais = [...c.atu];
+        tempDesejadas = [...c.des];
+        renderizarTags();
+        
+        // Destacar painel de configurações para indicar sucesso visual
+        els.configPanel.classList.add('ring-4', 'ring-indigo-100');
+        setTimeout(() => els.configPanel.classList.remove('ring-4', 'ring-indigo-100'), 500);
+    }
+
+    // Inicializa a Interface
+    renderizarTags();
+
+    // --- Funções Principais (Core Functions) ---
+
+    els.btnGerar.addEventListener('click', () => {
+        rPorMinuto = parseFloat(els.valMinuto.value) || 0;
+        
+        arrAntigos = [...tempAtuais];
+        arrNovos = [...tempDesejadas];
+        
+        if (arrAntigos.length === 0 && arrNovos.length === 0) {
+            alert("Insira pelo menos uma lâmpada em uma das sequências.");
+            return;
+        }
 
         costs.del = parseInt(els.cRemover.value) || 0;
         costs.ins = parseInt(els.cInserir.value) || 0;
         costs.sub = parseInt(els.cSub.value) || 0;
 
-        // Atualiza os valores no novo Header de Custos
+        // Atualiza os valores no novo Cabeçalho de Custos
+        els.displayR.textContent = rPorMinuto.toString();
         els.displayRemover.textContent = costs.del;
         els.displayInserir.textContent = costs.ins;
         els.displaySub.textContent = costs.sub;
@@ -315,8 +526,9 @@
         stopAutoPlay();
         clearHighlightsAndTags();
         els.btnCaminho.classList.add('hidden');
+        els.finalResultBanner.classList.add('hidden');
         
-        // Resetando o estado do botão de caminho otimizado (Correção do Bug)
+        // Reiniciar estado do botão do caminho otimizado
         els.btnCaminho.disabled = false;
         els.btnCaminho.classList.remove('opacity-50', 'cursor-not-allowed');
 
@@ -325,7 +537,8 @@
         els.btnPasso.classList.remove('opacity-50', 'cursor-not-allowed');
         els.btnPlay.classList.remove('opacity-50', 'cursor-not-allowed');
 
-        // Transição de UI (Esconde Form, Mostra Header e Área de Trabalho)
+        // Transição de Elementos Visuais
+        els.quickConfigPanel.classList.add('hidden');
         els.configPanel.classList.add('hidden');
         els.costHeader.classList.remove('hidden');
         els.workspace.classList.remove('hidden');
@@ -335,12 +548,13 @@
     });
 
     els.btnEditar.addEventListener('click', () => {
-        // Para tudo e volta para a tela de configurações
         stopAutoPlay();
         state = 'IDLE';
+        els.quickConfigPanel.classList.remove('hidden');
         els.configPanel.classList.remove('hidden');
         els.costHeader.classList.add('hidden');
         els.workspace.classList.add('hidden');
+        els.finalResultBanner.classList.add('hidden');
         clearHighlightsAndTags();
     });
 
@@ -361,23 +575,13 @@
                 if (r === -1 && c === -1) {
                     div.classList.add('cell-empty');
                 } else if (r === -1) {
-                    div.classList.add('cell-header');
-                    div.textContent = c === 0 ? 'Ø' : arrNovos[c-1];
-                    // Torna os cabeçalhos novos editáveis
-                    if (c > 0) {
-                        div.contentEditable = "true";
-                        div.title = "Clique para renomear";
-                        div.addEventListener('blur', (e) => arrNovos[c-1] = e.target.textContent.trim().toUpperCase());
-                    }
+                    const cor = arrNovos[c-1];
+                    div.classList.add('cell-header', getBgClassByColor(cor));
+                    div.textContent = c === 0 ? 'Ø' : cor;
                 } else if (c === -1) {
-                    div.classList.add('cell-header');
-                    div.textContent = r === 0 ? 'Ø' : arrAntigos[r-1];
-                    // Torna os cabeçalhos antigos editáveis
-                    if (r > 0) {
-                        div.contentEditable = "true";
-                        div.title = "Clique para renomear";
-                        div.addEventListener('blur', (e) => arrAntigos[r-1] = e.target.textContent.trim().toUpperCase());
-                    }
+                    const cor = arrAntigos[r-1];
+                    div.classList.add('cell-header', getBgClassByColor(cor));
+                    div.textContent = r === 0 ? 'Ø' : cor;
                 } else {
                     div.textContent = ''; 
                 }
@@ -403,7 +607,6 @@
             el.classList.remove('active-calc', 'dep-delete', 'dep-insert', 'dep-sub', 'target-preview', 'path-node');
         });
 
-        // Limpa tanto as tags de preview quanto as tags de caminho
         document.querySelectorAll('.floating-tag, .path-tag').forEach(tag => tag.remove());
     }
 
@@ -429,6 +632,10 @@
             if (currJ >= cols) {
                 state = 'INIT_COL';
                 currI = 1;
+                // Previne o bloqueio caso a matriz tenha apenas 1 linha
+                if (currI >= rows) {
+                    avancarParaMioloOuFim();
+                }
             }
         } 
         else if (state === 'INIT_COL') {
@@ -438,10 +645,7 @@
             
             currI++;
             if (currI >= rows) {
-                state = 'CALC_PREVIEW';
-                currI = 1;
-                currJ = 1;
-                updateStatus('Calculando Miolo', 'bg-yellow-100 text-yellow-700');
+                avancarParaMioloOuFim();
             }
         }
         else if (state === 'CALC_PREVIEW') {
@@ -452,7 +656,6 @@
             targetCell.textContent = "?";
             targetCell.classList.add('target-preview');
 
-            // Verifica se os enfeites da linha e coluna atual são iguais
             const isMatch = arrAntigos[currI - 1] === arrNovos[currJ - 1];
             const actualSubCost = isMatch ? 0 : costs.sub;
 
@@ -463,7 +666,6 @@
             addPreviewTag(currI - 1, currJ, `+${costs.del} = ${costDel}`, 'tag-del', 'dep-delete');
             addPreviewTag(currI, currJ - 1, `+${costs.ins} = ${costIns}`, 'tag-ins', 'dep-insert');
             
-            // Se for igual, mostra tag cinza de +0, senão mostra a tag amarela normal
             if (isMatch) {
                 addPreviewTag(currI - 1, currJ - 1, `+0 = ${costSub}`, 'tag-match', 'dep-match');
             } else {
@@ -496,18 +698,49 @@
             }
 
             if (currI >= rows) {
-                state = 'DONE';
-                stopAutoPlay();
-                updateStatus('Finalizado', 'bg-emerald-100 text-emerald-800');
-                els.btnPasso.disabled = true;
-                els.btnPlay.disabled = true;
-                els.btnPasso.classList.add('opacity-50', 'cursor-not-allowed');
-                els.btnPlay.classList.add('opacity-50', 'cursor-not-allowed');
-                els.btnCaminho.classList.remove('hidden');
+                finalizarSimulacao();
             } else {
                 state = 'CALC_PREVIEW'; 
             }
         }
+    }
+
+    // Função auxiliar para resolver casos sem miolo (ex: Arrays vazios de um dos lados)
+    function avancarParaMioloOuFim() {
+        if (rows > 1 && cols > 1) {
+            state = 'CALC_PREVIEW';
+            currI = 1;
+            currJ = 1;
+            updateStatus('Calculando Miolo', 'bg-yellow-100 text-yellow-700');
+        } else {
+            finalizarSimulacao();
+        }
+    }
+
+    function finalizarSimulacao() {
+        state = 'DONE';
+        stopAutoPlay();
+        updateStatus('Finalizado', 'bg-emerald-100 text-emerald-800');
+        els.btnPasso.disabled = true;
+        els.btnPlay.disabled = true;
+        els.btnPasso.classList.add('opacity-50', 'cursor-not-allowed');
+        els.btnPlay.classList.add('opacity-50', 'cursor-not-allowed');
+        els.btnCaminho.classList.remove('hidden');
+        
+        mostrarResultadoFinal();
+    }
+
+    function mostrarResultadoFinal() {
+        const tempoTotal = dp[rows - 1][cols - 1];
+        // Aplica a fórmula do Beecrowd 1833: (Tempo * R) / 100
+        const valorFinal = (tempoTotal * rPorMinuto) / 100;
+        
+        // Formatação padrão PT-BR para Reais (com vírgula nos centavos)
+        const valorFormatado = valorFinal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        els.resTempo.textContent = tempoTotal;
+        els.resValor.textContent = valorFormatado;
+        els.finalResultBanner.classList.remove('hidden');
     }
 
     function toggleAutoPlay() {
@@ -538,7 +771,7 @@
         }
     }
 
-    // --- Nova Lógica de Backtracking ---
+    // --- Backtracking ---
     async function highlightOptimalPath() {
         clearHighlightsAndTags();
         updateStatus('Mostrando Rota', 'bg-purple-100 text-purple-700');
@@ -547,7 +780,6 @@
         let j = cols - 1;
         let path = [[i, j]];
 
-        // Caminho Reverso para encontrar a rota matemática
         while (i > 0 || j > 0) {
             let current = dp[i][j];
             let isMatch = (i > 0 && j > 0) ? (arrAntigos[i-1] === arrNovos[j-1]) : false;
@@ -563,7 +795,6 @@
             path.push([i, j]);
         }
 
-        // Inverte para animar do começo ao fim (0,0 até n,n)
         path.reverse();
         
         for (let k = 0; k < path.length; k++) {
@@ -571,12 +802,11 @@
             const cell = document.getElementById(`cell-${r}-${c}`);
             cell.classList.add('path-node');
 
-            // Se não for a primeira célula, adicionamos a TAG baseada no movimento
             if (k > 0) {
                 const [prevR, prevC] = path[k-1];
                 let opClass = '', icon = '', addedCost = '';
 
-                if (r > prevR && c > prevC) { // Moveu na Diagonal
+                if (r > prevR && c > prevC) { 
                     let isMatch = arrAntigos[r-1] === arrNovos[c-1];
                     if (isMatch) {
                         opClass = 'path-tag-match';
@@ -587,11 +817,11 @@
                         icon = 'fa-exchange-alt';
                         addedCost = `+${costs.sub}`;
                     }
-                } else if (r > prevR && c === prevC) { // Moveu para Baixo
+                } else if (r > prevR && c === prevC) { 
                     opClass = 'path-tag-del';
                     icon = 'fa-minus-circle';
                     addedCost = `+${costs.del}`;
-                } else if (r === prevR && c > prevC) { // Moveu para a Direita
+                } else if (r === prevR && c > prevC) { 
                     opClass = 'path-tag-ins';
                     icon = 'fa-plus-circle';
                     addedCost = `+${costs.ins}`;
@@ -603,7 +833,6 @@
                 cell.appendChild(tag);
             }
 
-            // Aumentei o delay para 300ms para o usuário poder ler as tags nascendo
             await new Promise(resolve => setTimeout(resolve, 300));
         }
 
